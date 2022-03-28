@@ -10,8 +10,6 @@ for path, currentDirectory, files in os.walk("/home/asim/Downloads/Programming/P
             email = ""
             password = ""
             count = 0
-            with open('log', 'a') as the_file:
-                the_file.write("==============")
 
             print("Starting:",os.path.join(path, file))
             input_file = open(file,"r")
@@ -27,7 +25,7 @@ for path, currentDirectory, files in os.walk("/home/asim/Downloads/Programming/P
                     split = line.split(';',1)
                 if(semi < dots):
                     split = line.split(':',1)
-                print(split)
+                #print(split)
                 if(len(split) ==2):
                     email = split[0]
                     password = split[1].split("\n")[0] or split[1]
@@ -35,11 +33,17 @@ for path, currentDirectory, files in os.walk("/home/asim/Downloads/Programming/P
                     c.execute("INSERT INTO pwn (uuid, email, password) VALUES(?, ?, ?)", (str(uuid.uuid4()), email, password))
                     count += 1
                     counter += 1
+            conn.commit()
             print("file :",os.path.join(path, file), count , " record")
+            with open('log', 'a') as the_file:
+                the_file.write(os.path.join(path, file)+ os.linesep)
+            print(counter, " record inserted in db")
+            
+            
 
-conn.commit()
+n_estimate = conn.execute("SELECT COUNT() FROM pwn").fetchone()[0]
+print("successfully store ",n_estimate," record in database")
+
 conn.close()
-print("successfully store ",counter," record in database")
-with open('log', 'a') as the_file:
-    txt = str("successfully store ")
-    the_file.write(txt)
+
+
