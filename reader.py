@@ -8,7 +8,6 @@ counter = 0
 reader_path = '/home/asim/Downloads/Programming/Python lab/dataleak'
 for path, currentDirectory, files in os.walk(reader_path):
     for file in files:
-        
         if file.endswith(".txt"):
             start_t = time.time()
             print(os.path.join(path, file))
