@@ -3,6 +3,7 @@ import sqlite3
 import threading
 import multiprocessing
 import os,uuid,time
+import numpy as np
 from typing import List
 
 DB_NAME = "powned"
@@ -22,7 +23,7 @@ def consumer():
     while True:
         item = q.get()
         stmt, batch = item
-        print(len(batch),stmt)
+        # print(len(batch),stmt)
         print ("\n start Time Taken for "+str(len(batch))+" record: %.3f sec" % (time.time()-start_t))
         con.execute('BEGIN')
         con.executemany(stmt, batch)
@@ -33,31 +34,67 @@ def consumer():
         print("successfully store ",n_estimate," record in database")
 
 
-def producer(count: int):
-    min_batch_size = 1_000_000
-    for _ in range(int(count / min_batch_size)):
-        current_batch = []
-        for _ in range(min_batch_size):
-                current_batch.append((str(uuid.uuid4()), 'email@em.com', 'password@123'))
-        q.put(('INSERT INTO pwn (uuid, email, password) VALUES(?, ?, ?)', current_batch))
+def producer(count: int, batches, p_id):
+    print(batches[p_id])
+    min_batch_size = 50
+    current_batch = []
+    counter = 0
+
+    for file_path in batches[p_id]:
+        input_file = open(file_path,"r")
+        with open(file_path,"r") as input_file:
+            lines = input_file.read().splitlines()
+            print("start file "+file_path+ " => process "+str(p_id))
+            for line in lines: 
+                split = ''
+                semi = line.find(';')
+                dots = line.find(':')
+                if(semi == -1):
+                    split = line.split(':',1)
+                elif(dots == -1):
+                    split = line.split(';',1)
+                if(semi < dots):
+                    split = line.split(';',1)
+                if(semi < dots):
+                    split = line.split(':',1)
+                #print(split)
+                if(len(split) ==2):
+                    email = split[0]
+                    password = split[1].split("\n")[0] or split[1]
+                    current_batch.append((str(uuid.uuid4()), email, password))
+                    counter +=1
+                if(counter % min_batch_size == 1):
+                    q.put(('INSERT INTO pwn (uuid, email, password) VALUES(?, ?, ?)', current_batch))
+
+def path_splitter(producers_count):
+    reader_path = '/home/asim/Downloads/Programming/Python lab/splitted'
+    pathes = []
+    for path, currentDirectory, files in os.walk(reader_path):
+        for file in files:
+            if file.endswith(".txt"):
+                start_t = time.time()
+                pathes.append(os.path.join(path, file))
+    batches = np.array_split(pathes,producers_count)
+    return batches
 
 
 def main():
     
-    total_rows = 100_000_000
+    total_rows = 1_000
     # start the consumer
     threading.Thread(target=consumer, daemon=True).start()
 
     # we would want to launch as many as producers, so we will take the max CPU value
     # and launch as many. We keep two threads, one for main and one for consumer.
     max_producers = multiprocessing.cpu_count() - 2
+    batches = path_splitter(max_producers)
     print(max_producers, 'multiprocessing used')
 
     # how many rows each producer should produce
     each_producer_count = int(total_rows / max_producers)
 
     producer_threads: List[threading.Thread] = [threading.Thread(
-        target=producer, args=(each_producer_count,)) for _ in range(max_producers)]
+        target=producer, args=(each_producer_count,batches,i)) for i in range(max_producers)]
 
     for p in producer_threads:
         p.start()

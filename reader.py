@@ -5,7 +5,7 @@ c = conn.cursor()
 c.execute('''PRAGMA synchronous = EXTRA''')
 c.execute('''PRAGMA journal_mode = WAL''')
 counter = 0
-reader_path = '/home/asim/Downloads/Programming/Python lab/dataleak'
+reader_path = '/home/asim/Downloads/Programming/Python lab/splitted'
 for path, currentDirectory, files in os.walk(reader_path):
     for file in files:
         if file.endswith(".txt"):
@@ -19,6 +19,7 @@ for path, currentDirectory, files in os.walk(reader_path):
             input_file = open(os.path.join(path, file),"r")
             with open(os.path.join(path, file),"r") as input_file:
                 lines = input_file.read().splitlines()
+                print(len(lines))
                 for line in lines: 
                     split = ''
                     semi = line.find(';')
@@ -36,10 +37,10 @@ for path, currentDirectory, files in os.walk(reader_path):
                         email = split[0]
                         password = split[1].split("\n")[0] or split[1]
 
-                        c.execute("INSERT INTO pwn (uuid, email, password) VALUES(?, ?, ?)", (str(uuid.uuid4()), email, password))
+                        # c.execute("INSERT INTO pwn (uuid, email, password) VALUES(?, ?, ?)", (str(uuid.uuid4()), email, password))
                         count += 1
                         counter += 1
-                conn.commit()
+                # conn.commit()
             
                 print("file :",os.path.join(path, file), count , " record")
                 with open('log', 'a') as the_file:
