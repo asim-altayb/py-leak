@@ -5,11 +5,13 @@ import multiprocessing
 import os,uuid,time
 import numpy as np
 from typing import List
+from threading import Lock
 
 DB_NAME = "powned"
 
 q = queue.Queue()
 start_t = time.time()
+locker = threading.Lock()
 
 
 def consumer():
@@ -35,7 +37,7 @@ def consumer():
 
 
 def producer(count: int, batches, p_id):
-    print(batches[p_id])
+    # print(batches[p_id])
     min_batch_size = 50
     current_batch = []
     counter = 0
@@ -61,7 +63,8 @@ def producer(count: int, batches, p_id):
                 if(len(split) ==2):
                     email = split[0]
                     password = split[1].split("\n")[0] or split[1]
-                    current_batch.append((str(uuid.uuid4()), email, password))
+                    safe_uuid4 = str(uuid.uuid4())+str(p_id)
+                    current_batch.append((safe_uuid4, email, password))
                     counter +=1
                 if(counter % min_batch_size == 1):
                     q.put(('INSERT INTO pwn (uuid, email, password) VALUES(?, ?, ?)', current_batch))
@@ -77,24 +80,38 @@ def path_splitter(producers_count):
     batches = np.array_split(pathes,producers_count)
     return batches
 
+def generate_uuid():
+    return uuid.uuid4()
+
 
 def main():
     
     total_rows = 1_000
     # start the consumer
-    threading.Thread(target=consumer, daemon=True).start()
+    # threading.Thread(target=consumer, daemon=True).start()
 
     # we would want to launch as many as producers, so we will take the max CPU value
     # and launch as many. We keep two threads, one for main and one for consumer.
     max_producers = multiprocessing.cpu_count() - 2
+    consumer_processer = int(max_producers/2)
     batches = path_splitter(max_producers)
     print(max_producers, 'multiprocessing used')
 
     # how many rows each producer should produce
     each_producer_count = int(total_rows / max_producers)
+    
+    consumer_threads: List[threading.Thread] = [threading.Thread(
+        target=consumer, daemon=True) for i in range(consumer_processer)]
 
     producer_threads: List[threading.Thread] = [threading.Thread(
-        target=producer, args=(each_producer_count,batches,i)) for i in range(max_producers)]
+        target=producer, args=(each_producer_count,batches,i)) for i in range(max_producers - consumer_processer)]
+
+
+    for p in consumer_threads:
+        p.start()
+
+    for p in consumer_threads:
+        p.join()
 
     for p in producer_threads:
         p.start()
