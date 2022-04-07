@@ -14,7 +14,33 @@ start_t = time.time()
 locker = threading.Lock()
 
 
-def consumer():
+# def consumer():
+#     con = sqlite3.connect(DB_NAME, isolation_level=None)
+#     con.execute('PRAGMA journal_mode = OFF;')
+#     con.execute('PRAGMA synchronous = 0;')
+#     con.execute('PRAGMA cache_size = 30000000;')  # give it a 30 GB
+#     con.execute('PRAGMA locking_mode = EXCLUSIVE;')
+#     con.execute('PRAGMA temp_store = MEMORY;')
+
+#     while True:
+#         item = q.get()
+#         stmt, batch = item
+#         # print(len(batch),stmt)
+#         print ("\n start Time Taken for "+str(len(batch))+" record: %.3f sec" % (time.time()-start_t))
+#         con.execute('BEGIN')
+#         con.executemany(stmt, batch)
+#         con.commit()
+#         q.task_done()
+#         print ("\n finish Time Taken for"+str(len(batch))+"  record: %.3f sec" % (time.time()-start_t))
+#         n_estimate = con.execute("SELECT COUNT() FROM pwn").fetchone()[0]
+#         print("successfully store ",n_estimate," record in database")
+
+
+def producer(count: int, batches, p_id):
+    # print(batches[p_id])
+    min_batch_size = 50
+    #current_batch = []
+    counter = 0
     con = sqlite3.connect(DB_NAME, isolation_level=None)
     con.execute('PRAGMA journal_mode = OFF;')
     con.execute('PRAGMA synchronous = 0;')
@@ -22,28 +48,9 @@ def consumer():
     con.execute('PRAGMA locking_mode = EXCLUSIVE;')
     con.execute('PRAGMA temp_store = MEMORY;')
 
-    while True:
-        item = q.get()
-        stmt, batch = item
-        # print(len(batch),stmt)
-        print ("\n start Time Taken for "+str(len(batch))+" record: %.3f sec" % (time.time()-start_t))
-        con.execute('BEGIN')
-        con.executemany(stmt, batch)
-        con.commit()
-        q.task_done()
-        print ("\n finish Time Taken for"+str(len(batch))+"  record: %.3f sec" % (time.time()-start_t))
-        n_estimate = con.execute("SELECT COUNT() FROM pwn").fetchone()[0]
-        print("successfully store ",n_estimate," record in database")
-
-
-def producer(count: int, batches, p_id):
-    # print(batches[p_id])
-    min_batch_size = 50
-    current_batch = []
-    counter = 0
-
     for file_path in batches[p_id]:
         input_file = open(file_path,"r")
+        current_batch = []
         with open(file_path,"r") as input_file:
             lines = input_file.read().splitlines()
             print("start file "+file_path+ " => process "+str(p_id))
@@ -68,6 +75,14 @@ def producer(count: int, batches, p_id):
                     counter +=1
                 if(counter % min_batch_size == 1):
                     q.put(('INSERT INTO pwn (uuid, email, password) VALUES(?, ?, ?)', current_batch))
+
+        print ("\n start Time Taken for "+str(len(current_batch))+" record: %.3f sec" % (time.time()-start_t))
+        con.execute('BEGIN')
+        con.executemany('INSERT INTO pwn (uuid, email, password) VALUES(?, ?, ?)', current_batch)
+        con.commit()
+        print ("\n finish Time Taken for"+str(len(current_batch))+"  record: %.3f sec" % (time.time()-start_t))
+        n_estimate = con.execute("SELECT COUNT() FROM pwn").fetchone()[0]
+        print("successfully store ",n_estimate," record in database")
 
 def path_splitter(producers_count):
     reader_path = '/home/asim/Downloads/Programming/Python lab/splitted'
@@ -99,19 +114,19 @@ def main():
 
     # how many rows each producer should produce
     each_producer_count = int(total_rows / max_producers)
-    
-    consumer_threads: List[threading.Thread] = [threading.Thread(
-        target=consumer, daemon=True) for i in range(consumer_processer)]
+
+    # consumer_threads: List[threading.Thread] = [threading.Thread(
+    #     target=consumer, daemon=True) for i in range(consumer_processer)]
 
     producer_threads: List[threading.Thread] = [threading.Thread(
-        target=producer, args=(each_producer_count,batches,i)) for i in range(max_producers - consumer_processer)]
+        target=producer, args=(each_producer_count,batches,i)) for i in range(max_producers)]
 
 
-    for p in consumer_threads:
-        p.start()
+    # for p in consumer_threads:
+    #     p.start()
 
-    for p in consumer_threads:
-        p.join()
+    # for p in consumer_threads:
+    #     p.join()
 
     for p in producer_threads:
         p.start()
