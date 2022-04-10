@@ -13,27 +13,13 @@ q = queue.Queue()
 start_t = time.time()
 locker = threading.Lock()
 
+con = sqlite3.connect(DB_NAME, isolation_level=None)
+con.execute('PRAGMA journal_mode = OFF;')
+con.execute('PRAGMA synchronous = 0;')
+con.execute('PRAGMA cache_size = 30000000;')  # give it a 30 GB
+con.execute('PRAGMA locking_mode = EXCLUSIVE;')
+con.execute('PRAGMA temp_store = MEMORY;')
 
-# def consumer():
-#     con = sqlite3.connect(DB_NAME, isolation_level=None)
-#     con.execute('PRAGMA journal_mode = OFF;')
-#     con.execute('PRAGMA synchronous = 0;')
-#     con.execute('PRAGMA cache_size = 30000000;')  # give it a 30 GB
-#     con.execute('PRAGMA locking_mode = EXCLUSIVE;')
-#     con.execute('PRAGMA temp_store = MEMORY;')
-
-#     while True:
-#         item = q.get()
-#         stmt, batch = item
-#         # print(len(batch),stmt)
-#         print ("\n start Time Taken for "+str(len(batch))+" record: %.3f sec" % (time.time()-start_t))
-#         con.execute('BEGIN')
-#         con.executemany(stmt, batch)
-#         con.commit()
-#         q.task_done()
-#         print ("\n finish Time Taken for"+str(len(batch))+"  record: %.3f sec" % (time.time()-start_t))
-#         n_estimate = con.execute("SELECT COUNT() FROM pwn").fetchone()[0]
-#         print("successfully store ",n_estimate," record in database")
 
 
 def producer(count: int, batches, p_id):
@@ -41,12 +27,7 @@ def producer(count: int, batches, p_id):
     min_batch_size = 50
     #current_batch = []
     counter = 0
-    con = sqlite3.connect(DB_NAME, isolation_level=None)
-    con.execute('PRAGMA journal_mode = OFF;')
-    con.execute('PRAGMA synchronous = 0;')
-    con.execute('PRAGMA cache_size = 30000000;')  # give it a 30 GB
-    con.execute('PRAGMA locking_mode = EXCLUSIVE;')
-    con.execute('PRAGMA temp_store = MEMORY;')
+    
 
     for file_path in batches[p_id]:
         input_file = open(file_path,"r")
