@@ -20,12 +20,19 @@ TOTAL_FILES = 0
 INSERTED_FILES = 0
 INSERTED_ROWS = 0
 
+def split_line(txt):
+    delims = [':',';',' ']
+    for d in delims:
+        result = txt.split(d, maxsplit=1)
+        if len(result) == 2: return result
+
+    return [txt] # If nothing worked, return the input
+
 def inserter(pathes,P_ID):
     global TOTAL_FILES
     global TOTAL_ROWS
     global INSERTED_FILES
     global INSERTED_ROWS
-    min_batch_size = 50
     for file_path in pathes[P_ID]:
         input_file = open(file_path,"r")
         current_batch = []
@@ -34,18 +41,7 @@ def inserter(pathes,P_ID):
             lines = input_file.read().splitlines()
             print("\n start file "+file_path+" =>" + str(P_ID))
             for line in lines: 
-                split = ''
-                semi = line.find(';')
-                dots = line.find(':')
-                if(semi == -1):
-                    split = line.split(':',1)
-                elif(dots == -1):
-                    split = line.split(';',1)
-                if(semi < dots):
-                    split = line.split(';',1)
-                if(semi < dots):
-                    split = line.split(':',1)
-                #print(split)
+                split = split_line(line)
                 if(len(split) ==2):
                     email = split[0]
                     password = split[1].split("\n")[0] or split[1]
@@ -65,7 +61,7 @@ def inserter(pathes,P_ID):
 def path_splitter(producers_count):
     global TOTAL_FILES
     global TOTAL_ROWS
-    reader_path = '/home/asim/Downloads/Programming/Python lab/splitted'
+    reader_path = '/home/asim/Downloads/Programming/Python lab/splitted/x'
     pathes = []
     for path, currentDirectory, files in os.walk(reader_path):
         for file in files:
@@ -84,7 +80,7 @@ def main():
 
     # how many rows each producer should produce
     each_producer_count = int(TOTAL_ROWS / max_producers)
-    inserter(TOTAL_ROWS,1)
+    inserter(pathes,1)
     # inserter_threads: List[threading.Thread] = [threading.Thread(
     #     target=inserter, args=(pathes,i)) for i in range(multiprocessing.cpu_count() - 2)]
 
