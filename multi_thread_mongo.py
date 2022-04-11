@@ -49,7 +49,7 @@ def inserter(pathes,P_ID):
             INSERTED_ROWS += len(lines)
         collection.insert_many(current_batch, ordered=False)
         INSERTED_FILES +=1
-        print("\n inserted "+len(lines)+" in " + str(time.time()-insert_s_time)+" =>" + str(P_ID))
+        print("\n inserted "+str(len(lines))+" in " + str(time.time()-insert_s_time)+" =>" + str(P_ID))
         print("\n FILES PROGRESS "+str(INSERTED_FILES)+"/"+str(TOTAL_FILES)+" =>" + str(P_ID))
         print("\n ROWS PROGRESS "+str(INSERTED_ROWS)+"/"+str(TOTAL_ROWS)+" =>" + str(P_ID))
         
