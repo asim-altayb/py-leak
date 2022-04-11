@@ -52,10 +52,11 @@ def inserter(pathes,P_ID):
                     current_batch.append({"email":email,"password":password})
             INSERTED_ROWS += len(lines)
         collection.insert_many(current_batch, ordered=False)
+        INSERTED_FILES +=1
         print("\n inserted "+len(lines)+" in " + str(time.time()-insert_s_time)+" =>" + str(P_ID))
         print("\n FILES PROGRESS "+str(INSERTED_FILES)+"/"+str(TOTAL_FILES)+" =>" + str(P_ID))
         print("\n ROWS PROGRESS "+str(INSERTED_ROWS)+"/"+str(TOTAL_ROWS)+" =>" + str(P_ID))
-        INSERTED_FILES +=1
+        
 
 
 
@@ -73,8 +74,8 @@ def path_splitter(producers_count):
                 TOTAL_ROWS += sum(1 for line in open(os.path.join(path, file)))
                 start_t = time.time()
                 pathes.append(os.path.join(path, file))
-    batches = np.array_split(pathes,producers_count)
-    return batches
+    #batches = np.array_split(pathes,producers_count)
+    return pathes
 
 def main():
     max_producers = multiprocessing.cpu_count() - 2
@@ -83,15 +84,16 @@ def main():
 
     # how many rows each producer should produce
     each_producer_count = int(TOTAL_ROWS / max_producers)
-    inserter_threads: List[threading.Thread] = [threading.Thread(
-        target=inserter, args=(pathes,i)) for i in range(multiprocessing.cpu_count() - 2)]
+    inserter(TOTAL_ROWS,1)
+    # inserter_threads: List[threading.Thread] = [threading.Thread(
+    #     target=inserter, args=(pathes,i)) for i in range(multiprocessing.cpu_count() - 2)]
 
 
-    for p in inserter_threads:
-        p.start()
+    # for p in inserter_threads:
+    #     p.start()
 
-    for p in inserter_threads:
-        p.join()
+    # for p in inserter_threads:
+    #     p.join()
 
     print ("\n Time Taken: %.3f sec" % (time.time()-start_t))
 
