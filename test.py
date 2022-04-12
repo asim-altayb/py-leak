@@ -1,11 +1,7 @@
-from collections import Counter
-
-with open('source.txt') as infile:
-    counts = Counter()
-    for x in infile:
-        counts += Counter(x.strip())
-
-for line, count in counts.most_common():
-    with open('result.txt', 'a') as the_file:
-        res = str(line)+":"+str(count)+"\n"
-        the_file.write(res)
+str = " asim@gm.com    12 34"
+delims = [':',';',' ']
+for d in delims:
+    result = str.strip().split(d, maxsplit=1)
+    if len(result) == 2:
+        result[1] = result[1].strip()
+        print(result)
